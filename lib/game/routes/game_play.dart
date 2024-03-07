@@ -20,8 +20,14 @@ class GamePLay extends Component with KeyboardHandler {
   @override
   Future<void> onLoad() async {
     print('currentLevel: $currentLevel ');
-    final map = await TiledComponent.load('sampleMap.tmx', Vector2.all(16.0));
-    await add(map);
+    final map = await TiledComponent.load('Level1.tmx', Vector2.all(16.0));
+    final world = World(children: [map]);
+    await add(world);
+    final camera = CameraComponent.withFixedResolution(
+        width: 320, height: 180, world: world);
+    await add(camera);
+    camera
+        .moveTo(Vector2(map.size.x * 0.5, camera.viewport.virtualSize.y * 0.5));
   }
 
   @override
