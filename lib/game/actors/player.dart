@@ -9,7 +9,11 @@ import 'package:ski_master/game/actors/snowman.dart';
 import 'package:ski_master/game/routes/game_play.dart';
 
 class Player extends PositionComponent
-    with HasGameReference, HasAncestor<GamePLay>, CollisionCallbacks {
+    with
+        HasGameReference,
+        HasAncestor<GamePLay>,
+        CollisionCallbacks,
+        HasTimeScale {
   Player({super.position, required Sprite sprite})
       : _body = SpriteComponent(sprite: sprite, anchor: Anchor.center);
   late final SpriteComponent _body;

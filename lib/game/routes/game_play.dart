@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
@@ -35,17 +36,24 @@ class GamePLay extends Component with HasGameReference<SkiMasterGame> {
   late final _resetTimer = Timer(3, onTick: _resetPlayer, autoStart: false);
   late final Vector2 _lastSafePosition;
   int _nTrailTriggers = 0;
+  static const _timeScaleRate = 1;
   bool get _isOffTrail => _nTrailTriggers == 0;
+  bool _levelCompleted = false;
   @override
   void update(double dt) {
-    if (_isOffTrail) {
-      _resetTimer.update(dt);
-      if (!_resetTimer.isRunning()) {
-        _resetTimer.start();
-      }
+    if (_levelCompleted) {
+      _player.timeScale =
+          lerpDouble(_player.timeScale, 0, _timeScaleRate * dt)!;
     } else {
-      if (_resetTimer.isRunning()) {
-        _resetTimer.stop();
+      if (_isOffTrail) {
+        _resetTimer.update(dt);
+        if (!_resetTimer.isRunning()) {
+          _resetTimer.start();
+        }
+      } else {
+        if (_resetTimer.isRunning()) {
+          _resetTimer.stop();
+        }
       }
     }
     super.update(dt);
@@ -53,8 +61,8 @@ class GamePLay extends Component with HasGameReference<SkiMasterGame> {
 
   @override
   Future<void> onLoad() async {
-    print('currentLevel: $currentLevel ');
-    final map = await TiledComponent.load('Level1.tmx', Vector2.all(16.0));
+    final map =
+        await TiledComponent.load('Level$currentLevel.tmx', Vector2.all(16.0));
     await _setupWorldAndCamera(map);
     await _handleSpawnPoints(map);
     await _handleTriggers(map);
@@ -100,11 +108,27 @@ class GamePLay extends Component with HasGameReference<SkiMasterGame> {
               vertices.add(Vector2(point.x + object.x, point.y + object.y));
             }
             final hitbox = PolygonHitbox(vertices,
-                collisionType: CollisionType.passive, isSolid: true)
-              ..debugMode = true;
+                collisionType: CollisionType.passive, isSolid: true);
             hitbox.onCollisionStartCallback = (_, __) => _onTrailEnter();
             hitbox.onCollisionEndCallback = (_) => _onTrailExit();
             await map.add(hitbox);
+            break;
+          case 'Checkpoint':
+            final checkpoint = RectangleHitbox(
+                position: Vector2(object.x, object.y),
+                collisionType: CollisionType.passive,
+                size: Vector2(object.width, object.height));
+            checkpoint.onCollisionStartCallback =
+                (_, __) => _onCheckPoint(checkpoint);
+            await map.add(checkpoint);
+            break;
+          case 'End':
+            final trailEnd = RectangleHitbox(
+                position: Vector2(object.x, object.y),
+                collisionType: CollisionType.passive,
+                size: Vector2(object.width, object.height));
+            trailEnd.onCollisionStartCallback = (_, __) => _onTrailEnd();
+            await map.add(trailEnd);
             break;
         }
       }
@@ -130,5 +154,15 @@ class GamePLay extends Component with HasGameReference<SkiMasterGame> {
 
   void _resetPlayer() {
     _player.resetTo(_lastSafePosition);
+  }
+
+  void _onCheckPoint(RectangleHitbox checkpoint) {
+    _lastSafePosition.setFrom(checkpoint.absoluteCenter);
+    checkpoint.removeFromParent();
+  }
+
+  void _onTrailEnd() {
+    _levelCompleted = true;
+    onLevelCompleted.call();
   }
 }
