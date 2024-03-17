@@ -3,10 +3,12 @@ import 'dart:ui';
 
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
+import 'package:flame/effects.dart';
 import 'package:flame/game.dart';
 import 'package:flame/sprite.dart';
 import 'package:flame_tiled/flame_tiled.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:ski_master/game/actors/snowman.dart';
 import 'package:ski_master/game/game.dart';
 import 'package:ski_master/game/input.dart';
@@ -33,8 +35,9 @@ class GamePLay extends Component with HasGameReference<SkiMasterGame> {
   late World _world;
   late CameraComponent _camera;
   late Player _player;
-  late final _resetTimer = Timer(3, onTick: _resetPlayer, autoStart: false);
+  late final _resetTimer = Timer(1.5, onTick: _resetPlayer, autoStart: false);
   late final Vector2 _lastSafePosition;
+  late final RectangleComponent _fader;
   int _nTrailTriggers = 0;
   static const _timeScaleRate = 1;
   bool get _isOffTrail => _nTrailTriggers == 0;
@@ -45,7 +48,7 @@ class GamePLay extends Component with HasGameReference<SkiMasterGame> {
       _player.timeScale =
           lerpDouble(_player.timeScale, 0, _timeScaleRate * dt)!;
     } else {
-      if (_isOffTrail) {
+      if (_isOffTrail && input.active) {
         _resetTimer.update(dt);
         if (!_resetTimer.isRunning()) {
           _resetTimer.start();
@@ -66,6 +69,11 @@ class GamePLay extends Component with HasGameReference<SkiMasterGame> {
     await _setupWorldAndCamera(map);
     await _handleSpawnPoints(map);
     await _handleTriggers(map);
+    _fader = RectangleComponent(
+        size: _camera.viewport.virtualSize,
+        paint: Paint()..color = game.backgroundColor(),
+        children: [OpacityEffect.fadeOut(LinearEffectController(1.5))]);
+    _camera.viewport.add(_fader);
   }
 
   Future<void> _handleSpawnPoints(TiledComponent<FlameGame<World>> map) async {
@@ -122,6 +130,22 @@ class GamePLay extends Component with HasGameReference<SkiMasterGame> {
                 (_, __) => _onCheckPoint(checkpoint);
             await map.add(checkpoint);
             break;
+          case 'Ramp':
+            final ramp = RectangleHitbox(
+                position: Vector2(object.x, object.y),
+                collisionType: CollisionType.passive,
+                size: Vector2(object.width, object.height));
+            ramp.onCollisionStartCallback = (_, __) => _onRamp();
+            await map.add(ramp);
+            break;
+          case 'Start':
+            final trailStart = RectangleHitbox(
+                position: Vector2(object.x, object.y),
+                collisionType: CollisionType.passive,
+                size: Vector2(object.width, object.height));
+            trailStart.onCollisionStartCallback = (_, __) => _onTrailStart();
+            await map.add(trailStart);
+            break;
           case 'End':
             final trailEnd = RectangleHitbox(
                 position: Vector2(object.x, object.y),
@@ -162,7 +186,24 @@ class GamePLay extends Component with HasGameReference<SkiMasterGame> {
   }
 
   void _onTrailEnd() {
+    _fader.add(OpacityEffect.fadeIn(LinearEffectController(1.5)));
+    input.active = false;
     _levelCompleted = true;
     onLevelCompleted.call();
+  }
+
+  void _onTrailStart() {
+    _lastSafePosition.setFrom(_player.position);
+    input.active = true;
+  }
+
+  void _onRamp() {
+    final jumpFactor = _player.jump();
+    final jumpScale = lerpDouble(1, 1.2, jumpFactor)!;
+    final jumpDuration = lerpDouble(0, 0.8, jumpFactor)!;
+    _camera.viewfinder.add(ScaleEffect.by(
+        Vector2.all(jumpScale),
+        EffectController(
+            duration: jumpDuration, alternate: true, curve: Curves.easeInOut)));
   }
 }

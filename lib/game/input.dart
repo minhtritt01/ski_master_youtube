@@ -14,13 +14,14 @@ class Input extends Component
   var _leftInput = 0.0;
   var _rightInput = 0.0;
   static const _sensitivity = 2.0;
+  bool active = false;
   var hAxis = 0.0;
   @override
   void update(double dt) {
-    _leftInput =
-        lerpDouble(_leftInput, _leftPressed ? 1.5 : 0, _sensitivity * dt)!;
-    _rightInput =
-        lerpDouble(_rightInput, _rightPressed ? 1.5 : 0, _sensitivity * dt)!;
+    _leftInput = lerpDouble(
+        _leftInput, (_leftPressed && active) ? 1.5 : 0, _sensitivity * dt)!;
+    _rightInput = lerpDouble(
+        _rightInput, (_rightPressed && active) ? 1.5 : 0, _sensitivity * dt)!;
     hAxis = _rightInput - _leftInput;
     super.update(dt);
   }
@@ -33,9 +34,11 @@ class Input extends Component
       _rightPressed = keysPressed.contains(LogicalKeyboardKey.keyD) ||
           keysPressed.contains(LogicalKeyboardKey.arrowRight);
 
-      for (final entry in keyCallbacks.entries) {
-        if (entry.key == event.logicalKey) {
-          entry.value.call();
+      if (active) {
+        for (final entry in keyCallbacks.entries) {
+          if (entry.key == event.logicalKey) {
+            entry.value.call();
+          }
         }
       }
     }

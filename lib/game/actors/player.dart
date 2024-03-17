@@ -4,6 +4,8 @@ import 'dart:ui';
 
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
+import 'package:flame/effects.dart';
+import 'package:flutter/widgets.dart';
 import 'package:ski_master/game/actors/snowman.dart';
 
 import 'package:ski_master/game/routes/game_play.dart';
@@ -54,5 +56,16 @@ class Player extends PositionComponent
   void resetTo(Vector2 lastSafePosition) {
     position.setFrom(lastSafePosition);
     _speed *= 0.5;
+  }
+
+  double jump() {
+    final jumpFactor = _speed / _maxSpeed;
+    final jumpScale = lerpDouble(1, 1.2, jumpFactor)!;
+    final jumpDuration = lerpDouble(0, 0.8, jumpFactor)!;
+    _body.add(ScaleEffect.by(
+        Vector2.all(jumpScale),
+        EffectController(
+            duration: jumpDuration, alternate: true, curve: Curves.easeInOut)));
+    return jumpFactor;
   }
 }
