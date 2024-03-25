@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 
 class LevelComplete extends StatelessWidget {
   const LevelComplete(
-      {super.key, this.onNextPressed, this.onRetryPressed, this.onExitPressed});
+      {super.key,
+      this.onNextPressed,
+      this.onRetryPressed,
+      this.onExitPressed,
+      required this.nStars});
   final VoidCallback? onNextPressed;
   final VoidCallback? onRetryPressed;
   final VoidCallback? onExitPressed;
+  final int nStars;
   static const id = 'level-complete';
   @override
   Widget build(BuildContext context) {
@@ -22,10 +27,34 @@ class LevelComplete extends StatelessWidget {
             const SizedBox(
               height: 15.0,
             ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  nStars >= 1 ? Icons.star : Icons.star_border,
+                  color: nStars >= 1 ? Colors.amber : Colors.black,
+                  size: 50.0,
+                ),
+                Icon(
+                  nStars >= 2 ? Icons.star : Icons.star_border,
+                  color: nStars >= 2 ? Colors.amber : Colors.black,
+                  size: 50.0,
+                ),
+                Icon(
+                  nStars >= 3 ? Icons.star : Icons.star_border,
+                  color: nStars >= 3 ? Colors.amber : Colors.black,
+                  size: 50.0,
+                ),
+              ],
+            ),
+            const SizedBox(
+              height: 15.0,
+            ),
             SizedBox(
               width: 150.0,
               child: OutlinedButton(
-                  onPressed: onNextPressed, child: const Text('Next')),
+                  onPressed: nStars != 0 ? onNextPressed : null,
+                  child: const Text('Next')),
             ),
             const SizedBox(
               height: 5.0,

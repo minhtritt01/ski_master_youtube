@@ -41,6 +41,9 @@ class GamePLay extends Component with HasGameReference<SkiMasterGame> {
   late final _resetTimer = Timer(1.5, onTick: _resetPlayer, autoStart: false);
   late final Vector2 _lastSafePosition;
   late final RectangleComponent _fader;
+  late int _star1;
+  late int _star2;
+  late int _star3;
   int _nTrailTriggers = 0;
   static const _timeScaleRate = 1;
   int _nSnowmanCollected = 0;
@@ -72,6 +75,9 @@ class GamePLay extends Component with HasGameReference<SkiMasterGame> {
         await TiledComponent.load('Level$currentLevel.tmx', Vector2.all(16.0));
     final tiles = game.images.fromCache('../images/tilemap_packed.png');
     _spriteSheet = SpriteSheet(image: tiles, srcSize: Vector2.all(16.0));
+    _star1 = map.tileMap.map.properties.getValue<int>('Star1')!;
+    _star2 = map.tileMap.map.properties.getValue<int>('Star2')!;
+    _star3 = map.tileMap.map.properties.getValue<int>('Star3')!;
     await _setupWorldAndCamera(map);
     await _handleSpawnPoints(map);
     await _handleTriggers(map);
@@ -202,7 +208,15 @@ class GamePLay extends Component with HasGameReference<SkiMasterGame> {
     _fader.add(OpacityEffect.fadeIn(LinearEffectController(1.5)));
     input.active = false;
     _levelCompleted = true;
-    onLevelCompleted.call(1);
+    if (_nSnowmanCollected >= _star3) {
+      onLevelCompleted.call(3);
+    } else if (_nSnowmanCollected >= _star2) {
+      onLevelCompleted.call(2);
+    } else if (_nSnowmanCollected >= _star1) {
+      onLevelCompleted.call(1);
+    } else {
+      onLevelCompleted.call(0);
+    }
   }
 
   void _onTrailStart() {

@@ -13,7 +13,8 @@ import 'package:ski_master/game/routes/pause_menu.dart';
 import 'package:ski_master/game/routes/retry_menu.dart';
 import 'package:ski_master/game/routes/settings.dart';
 
-class SkiMasterGame extends FlameGame with HasKeyboardHandlerComponents,HasCollisionDetection {
+class SkiMasterGame extends FlameGame
+    with HasKeyboardHandlerComponents, HasCollisionDetection {
   final musicValueNotifier = ValueNotifier(true);
   final sfxValueNotifier = ValueNotifier(true);
   late final _routes = <String, Route>{
@@ -36,15 +37,21 @@ class SkiMasterGame extends FlameGame with HasKeyboardHandlerComponents,HasColli
         onRestartPressed: _restartGame,
         onResumePressed: _resumeGame,
         onExitPressed: _exitToMainMenu)),
-    LevelComplete.id: OverlayRoute((context, game) => LevelComplete(
-        onRetryPressed: _restartGame,
-        onNextPressed: _startNextLevel,
-        onExitPressed: _exitToMainMenu)),
     RetryMenu.id: OverlayRoute((context, game) => RetryMenu(
         onRetryPressed: _restartGame, onExitPressed: _exitToMainMenu)),
   };
-  late final _router =
-      RouterComponent(initialRoute: MainMenu.id, routes: _routes);
+  late final _routeFactories = <String, Route Function(String)>{
+    LevelComplete.id: (argument) => OverlayRoute((context, game) =>
+        LevelComplete(
+            nStars: int.parse(argument),
+            onRetryPressed: _restartGame,
+            onNextPressed: _startNextLevel,
+            onExitPressed: _exitToMainMenu)),
+  };
+  late final _router = RouterComponent(
+      initialRoute: MainMenu.id,
+      routes: _routes,
+      routeFactories: _routeFactories);
   @override
   Future<void> onLoad() async {
     await add(_router);
@@ -104,8 +111,8 @@ class SkiMasterGame extends FlameGame with HasKeyboardHandlerComponents,HasColli
     _router.pushNamed(MainMenu.id);
   }
 
-  void _showLevelCompleteMenu() {
-    _router.pushNamed(LevelComplete.id);
+  void _showLevelCompleteMenu(int nStars) {
+    _router.pushNamed('${LevelComplete.id}/$nStars');
   }
 
   void _showRetryMenu() {
