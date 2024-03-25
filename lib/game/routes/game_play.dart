@@ -47,11 +47,13 @@ class GamePLay extends Component with HasGameReference<SkiMasterGame> {
   int _nTrailTriggers = 0;
   static const _timeScaleRate = 1;
   int _nSnowmanCollected = 0;
+  int _nLives = 3;
   bool get _isOffTrail => _nTrailTriggers == 0;
   bool _levelCompleted = false;
+  bool _gameOver = false;
   @override
   void update(double dt) {
-    if (_levelCompleted) {
+    if (_levelCompleted || _gameOver) {
       _player.timeScale =
           lerpDouble(_player.timeScale, 0, _timeScaleRate * dt)!;
     } else {
@@ -86,7 +88,9 @@ class GamePLay extends Component with HasGameReference<SkiMasterGame> {
         size: _camera.viewport.virtualSize,
         paint: Paint()..color = game.backgroundColor(),
         children: [OpacityEffect.fadeOut(LinearEffectController(1.5))]);
-    _hud = Hud(snowmanSprite: _spriteSheet.getSprite(5, 9));
+    _hud = Hud(
+        snowmanSprite: _spriteSheet.getSprite(5, 9),
+        playerSprite: _spriteSheet.getSprite(5, 10));
     await _camera.viewport.addAll([_fader, _hud]);
   }
 
@@ -196,7 +200,15 @@ class GamePLay extends Component with HasGameReference<SkiMasterGame> {
   }
 
   void _resetPlayer() {
-    _player.resetTo(_lastSafePosition);
+    --_nLives;
+    _hud.updateLifeCount(_nLives);
+    if (_nLives > 0) {
+      _player.resetTo(_lastSafePosition);
+    } else {
+      _gameOver = true;
+      _fader.add(OpacityEffect.fadeIn(LinearEffectController(1.5)));
+      onGameOver.call();
+    }
   }
 
   void _onCheckPoint(RectangleHitbox checkpoint) {
