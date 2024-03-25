@@ -11,13 +11,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:ski_master/game/actors/snowman.dart';
 import 'package:ski_master/game/game.dart';
+import 'package:ski_master/game/hud.dart';
 import 'package:ski_master/game/input.dart';
 import 'package:ski_master/game/actors/player.dart';
 
 class GamePLay extends Component with HasGameReference<SkiMasterGame> {
   static const id = 'game-play';
   final int currentLevel;
-  final VoidCallback onLevelCompleted;
+  final ValueChanged<int> onLevelCompleted;
   final VoidCallback onPausedPressed;
   final VoidCallback onGameOver;
   GamePLay(
@@ -29,17 +30,20 @@ class GamePLay extends Component with HasGameReference<SkiMasterGame> {
   });
   late final input = Input(keyCallbacks: {
     LogicalKeyboardKey.keyP: onPausedPressed,
-    LogicalKeyboardKey.keyC: onLevelCompleted,
+    LogicalKeyboardKey.keyC: () => onLevelCompleted.call(3),
     LogicalKeyboardKey.keyO: onGameOver
   });
   late World _world;
   late CameraComponent _camera;
   late Player _player;
+  late Hud _hud;
+  late SpriteSheet _spriteSheet;
   late final _resetTimer = Timer(1.5, onTick: _resetPlayer, autoStart: false);
   late final Vector2 _lastSafePosition;
   late final RectangleComponent _fader;
   int _nTrailTriggers = 0;
   static const _timeScaleRate = 1;
+  int _nSnowmanCollected = 0;
   bool get _isOffTrail => _nTrailTriggers == 0;
   bool _levelCompleted = false;
   @override
@@ -66,36 +70,40 @@ class GamePLay extends Component with HasGameReference<SkiMasterGame> {
   Future<void> onLoad() async {
     final map =
         await TiledComponent.load('Level$currentLevel.tmx', Vector2.all(16.0));
+    final tiles = game.images.fromCache('../images/tilemap_packed.png');
+    _spriteSheet = SpriteSheet(image: tiles, srcSize: Vector2.all(16.0));
     await _setupWorldAndCamera(map);
     await _handleSpawnPoints(map);
     await _handleTriggers(map);
     _fader = RectangleComponent(
+        priority: 1,
         size: _camera.viewport.virtualSize,
         paint: Paint()..color = game.backgroundColor(),
         children: [OpacityEffect.fadeOut(LinearEffectController(1.5))]);
-    _camera.viewport.add(_fader);
+    _hud = Hud(snowmanSprite: _spriteSheet.getSprite(5, 9));
+    await _camera.viewport.addAll([_fader, _hud]);
   }
 
   Future<void> _handleSpawnPoints(TiledComponent<FlameGame<World>> map) async {
     final spawnPointLayer = map.tileMap.getLayer<ObjectGroup>('SpawnPoint');
     final objects = spawnPointLayer?.objects;
-    final tiles = game.images.fromCache('../images/tilemap_packed.png');
-    final spriteSheet = SpriteSheet(image: tiles, srcSize: Vector2.all(16.0));
+
     if (objects != null) {
       for (var object in objects) {
         switch (object.class_) {
           case 'Player':
             _player = Player(
                 position: Vector2(object.x, object.y),
-                sprite: spriteSheet.getSprite(5, 10));
+                sprite: _spriteSheet.getSprite(5, 10));
             await _world.add(_player);
             _camera.follow(_player);
             _lastSafePosition = Vector2(object.x, object.y);
             break;
           case 'Snowman':
             final snowman = Snowman(
+                onCollected: _onSnowmanCollected,
                 position: Vector2(object.x, object.y),
-                sprite: spriteSheet.getSprite(5, 9));
+                sprite: _spriteSheet.getSprite(5, 9));
             await _world.add(snowman);
             break;
         }
@@ -168,6 +176,11 @@ class GamePLay extends Component with HasGameReference<SkiMasterGame> {
     await add(_camera);
   }
 
+  void _onSnowmanCollected() {
+    ++_nSnowmanCollected;
+    _hud.updateSnowmanCount(_nSnowmanCollected);
+  }
+
   void _onTrailEnter() {
     ++_nTrailTriggers;
   }
@@ -189,7 +202,7 @@ class GamePLay extends Component with HasGameReference<SkiMasterGame> {
     _fader.add(OpacityEffect.fadeIn(LinearEffectController(1.5)));
     input.active = false;
     _levelCompleted = true;
-    onLevelCompleted.call();
+    onLevelCompleted.call(1);
   }
 
   void _onTrailStart() {

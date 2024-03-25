@@ -1,13 +1,16 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
+import 'package:ski_master/game/actors/player.dart';
 
-class Snowman extends PositionComponent {
-  Snowman({super.position, required Sprite sprite})
+class Snowman extends PositionComponent with CollisionCallbacks {
+  Snowman({super.position, required Sprite sprite, required this.onCollected})
       : _body = SpriteComponent(sprite: sprite, anchor: Anchor.center);
-  late final SpriteComponent _body;
+  final SpriteComponent _body;
+  final VoidCallback? onCollected;
   @override
   Future<void> onLoad() async {
     await add(_body);
@@ -17,11 +20,21 @@ class Snowman extends PositionComponent {
         collisionType: CollisionType.passive));
   }
 
-  void collect() {
+  @override
+  void onCollisionStart(
+      Set<Vector2> intersectionPoints, PositionComponent other) {
+    if (other is Player) {
+      _collect();
+    }
+    super.onCollisionStart(intersectionPoints, other);
+  }
+
+  void _collect() {
     addAll([
       ScaleEffect.by(Vector2.all(1.2), LinearEffectController(0.4)),
       OpacityEffect.fadeOut(LinearEffectController(0.4),
           target: _body, onComplete: removeFromParent),
     ]);
+    onCollected?.call();
   }
 }
