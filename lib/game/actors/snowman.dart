@@ -6,6 +6,7 @@ import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
 import 'package:flame/particles.dart';
+import 'package:flame_audio/flame_audio.dart';
 import 'package:ski_master/game/actors/player.dart';
 import 'package:ski_master/game/game.dart';
 
@@ -42,6 +43,9 @@ class Snowman extends PositionComponent
   }
 
   void _collect() {
+    if (game.sfxValueNotifier.value) {
+      FlameAudio.play(SkiMasterGame.collectSfx);
+    }
     addAll([
       ScaleEffect.by(Vector2.all(1.2), LinearEffectController(0.4)),
       OpacityEffect.fadeOut(LinearEffectController(0.4),

@@ -6,6 +6,7 @@ import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
 import 'package:flame/game.dart';
 import 'package:flame/sprite.dart';
+import 'package:flame_audio/flame_audio.dart';
 import 'package:flame_tiled/flame_tiled.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -46,13 +47,49 @@ class GamePLay extends Component with HasGameReference<SkiMasterGame> {
   late int _star1;
   late int _star2;
   late int _star3;
+
   int _nTrailTriggers = 0;
   static const _timeScaleRate = 1;
+  static const _bgmFadeRate = 1.0;
+  static const _bgmMinVol = 0;
+  static const _bgmMaxVol = 0.6;
+
   int _nSnowmanCollected = 0;
   int _nLives = 3;
   bool get _isOffTrail => _nTrailTriggers == 0;
   bool _levelCompleted = false;
   bool _gameOver = false;
+  AudioPlayer? _bgmTrack;
+
+  @override
+  Future<void> onLoad() async {
+    if (game.musicValueNotifier.value) {
+      _bgmTrack =
+          await FlameAudio.loopLongAudio(SkiMasterGame.bgmTrack, volume: 0);
+    }
+    final map =
+        await TiledComponent.load('Level$currentLevel.tmx', Vector2.all(16.0));
+    final tiles = game.images.fromCache('../images/tilemap_packed.png');
+    _spriteSheet = SpriteSheet(image: tiles, srcSize: Vector2.all(16.0));
+    _star1 = map.tileMap.map.properties.getValue<int>('Star1')!;
+    _star2 = map.tileMap.map.properties.getValue<int>('Star2')!;
+    _star3 = map.tileMap.map.properties.getValue<int>('Star3')!;
+    await _setupWorldAndCamera(map);
+    await _handleSpawnPoints(map);
+    await _handleTriggers(map);
+    _fader = RectangleComponent(
+        priority: 1,
+        size: _camera.viewport.virtualSize,
+        paint: Paint()..color = game.backgroundColor(),
+        children: [OpacityEffect.fadeOut(LinearEffectController(1.5))]);
+    _hud = Hud(
+        snowmanSprite: _spriteSheet.getSprite(5, 9),
+        playerSprite: _spriteSheet.getSprite(5, 10));
+    await _camera.viewport.addAll([_fader, _hud]);
+    await _camera.viewfinder.add(_cameraShake);
+    _cameraShake.pause();
+  }
+
   @override
   void update(double dt) {
     if (_levelCompleted || _gameOver) {
@@ -76,32 +113,25 @@ class GamePLay extends Component with HasGameReference<SkiMasterGame> {
         }
       }
     }
+    if (_bgmTrack != null) {
+      if (_levelCompleted) {
+        if (_bgmTrack!.volume > _bgmMinVol) {
+          _bgmTrack!.setVolume(
+              lerpDouble(_bgmTrack!.volume, _bgmMinVol, _bgmFadeRate * dt)!);
+        }
+      } else {
+        if (_bgmTrack!.volume < _bgmMaxVol) {
+          _bgmTrack!.setVolume(
+              lerpDouble(_bgmTrack!.volume, _bgmMaxVol, _bgmFadeRate * dt)!);
+        }
+      }
+    }
     super.update(dt);
   }
 
   @override
-  Future<void> onLoad() async {
-    final map =
-        await TiledComponent.load('Level$currentLevel.tmx', Vector2.all(16.0));
-    final tiles = game.images.fromCache('../images/tilemap_packed.png');
-    _spriteSheet = SpriteSheet(image: tiles, srcSize: Vector2.all(16.0));
-    _star1 = map.tileMap.map.properties.getValue<int>('Star1')!;
-    _star2 = map.tileMap.map.properties.getValue<int>('Star2')!;
-    _star3 = map.tileMap.map.properties.getValue<int>('Star3')!;
-    await _setupWorldAndCamera(map);
-    await _handleSpawnPoints(map);
-    await _handleTriggers(map);
-    _fader = RectangleComponent(
-        priority: 1,
-        size: _camera.viewport.virtualSize,
-        paint: Paint()..color = game.backgroundColor(),
-        children: [OpacityEffect.fadeOut(LinearEffectController(1.5))]);
-    _hud = Hud(
-        snowmanSprite: _spriteSheet.getSprite(5, 9),
-        playerSprite: _spriteSheet.getSprite(5, 10));
-    await _camera.viewport.addAll([_fader, _hud]);
-    await _camera.viewfinder.add(_cameraShake);
-    _cameraShake.pause();
+  void onRemove() {
+    _bgmTrack?.dispose();
   }
 
   Future<void> _handleSpawnPoints(TiledComponent<FlameGame<World>> map) async {

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
+import 'package:flame_audio/flame_audio.dart';
 import 'package:flutter/widgets.dart' hide Route, OverlayRoute;
 import 'package:ski_master/game/routes/game_play.dart';
 import 'package:ski_master/game/routes/level_complete.dart';
@@ -15,6 +16,10 @@ import 'package:ski_master/game/routes/settings.dart';
 
 class SkiMasterGame extends FlameGame
     with HasKeyboardHandlerComponents, HasCollisionDetection {
+  static const bgmTrack = '8BitDNALoop.wav';
+  static const collectSfx = 'Collect.wav';
+  static const hurtSfx = 'Hurt.wav';
+  static const jumpSfx = 'Jump.wav';
   final musicValueNotifier = ValueNotifier(true);
   final sfxValueNotifier = ValueNotifier(true);
   late final _routes = <String, Route>{
@@ -54,6 +59,8 @@ class SkiMasterGame extends FlameGame
       routeFactories: _routeFactories);
   @override
   Future<void> onLoad() async {
+    await FlameAudio.audioCache
+        .loadAll([bgmTrack, hurtSfx, collectSfx, jumpSfx]);
     await add(_router);
   }
 
@@ -108,7 +115,7 @@ class SkiMasterGame extends FlameGame
 
   void _exitToMainMenu() {
     _resumeGame();
-    _router.pushNamed(MainMenu.id);
+    _router.pushReplacementNamed(MainMenu.id);
   }
 
   void _showLevelCompleteMenu(int nStars) {
