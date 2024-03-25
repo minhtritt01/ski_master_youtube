@@ -39,6 +39,8 @@ class GamePLay extends Component with HasGameReference<SkiMasterGame> {
   late Hud _hud;
   late SpriteSheet _spriteSheet;
   late final _resetTimer = Timer(1.5, onTick: _resetPlayer, autoStart: false);
+  late final _cameraShake = MoveEffect.by(Vector2(0, 3),
+      InfiniteEffectController(ZigzagEffectController(period: 0.2)));
   late final Vector2 _lastSafePosition;
   late final RectangleComponent _fader;
   late int _star1;
@@ -62,9 +64,15 @@ class GamePLay extends Component with HasGameReference<SkiMasterGame> {
         if (!_resetTimer.isRunning()) {
           _resetTimer.start();
         }
+        if (_cameraShake.isPaused) {
+          _cameraShake.resume();
+        }
       } else {
         if (_resetTimer.isRunning()) {
           _resetTimer.stop();
+        }
+        if (!_cameraShake.isPaused) {
+          _cameraShake.pause();
         }
       }
     }
@@ -92,6 +100,8 @@ class GamePLay extends Component with HasGameReference<SkiMasterGame> {
         snowmanSprite: _spriteSheet.getSprite(5, 9),
         playerSprite: _spriteSheet.getSprite(5, 10));
     await _camera.viewport.addAll([_fader, _hud]);
+    await _camera.viewfinder.add(_cameraShake);
+    _cameraShake.pause();
   }
 
   Future<void> _handleSpawnPoints(TiledComponent<FlameGame<World>> map) async {
@@ -103,6 +113,7 @@ class GamePLay extends Component with HasGameReference<SkiMasterGame> {
         switch (object.class_) {
           case 'Player':
             _player = Player(
+                priority: 1,
                 position: Vector2(object.x, object.y),
                 sprite: _spriteSheet.getSprite(5, 10));
             await _world.add(_player);

@@ -1,16 +1,28 @@
 import 'dart:async';
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
+import 'package:flame/particles.dart';
 import 'package:ski_master/game/actors/player.dart';
+import 'package:ski_master/game/game.dart';
 
-class Snowman extends PositionComponent with CollisionCallbacks {
+class Snowman extends PositionComponent
+    with CollisionCallbacks, HasGameReference<SkiMasterGame> {
   Snowman({super.position, required Sprite sprite, required this.onCollected})
       : _body = SpriteComponent(sprite: sprite, anchor: Anchor.center);
   final SpriteComponent _body;
   final VoidCallback? onCollected;
+  late final _particlePaint = Paint()..color = game.backgroundColor();
+  static final _random = Random();
+  static Vector2 _randomVector(double scale) {
+    return Vector2(2 * _random.nextDouble() - 1, 2 * _random.nextDouble() - 1)
+      ..normalize()
+      ..scale(scale);
+  }
+
   @override
   Future<void> onLoad() async {
     await add(_body);
@@ -35,6 +47,18 @@ class Snowman extends PositionComponent with CollisionCallbacks {
       OpacityEffect.fadeOut(LinearEffectController(0.4),
           target: _body, onComplete: removeFromParent),
     ]);
+    parent?.add(ParticleSystemComponent(
+        position: position,
+        particle: Particle.generate(
+            lifespan: 1,
+            count: 30,
+            generator: (index) => MovingParticle(
+                child: ScalingParticle(
+                    to: 0,
+                    child: CircleParticle(
+                        paint: _particlePaint,
+                        radius: 2 + _random.nextDouble() * 3)),
+                to: _randomVector(16)))));
     onCollected?.call();
   }
 }
