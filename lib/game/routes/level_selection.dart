@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ski_master/game/game.dart';
 
 class LevelSelection extends StatelessWidget {
   const LevelSelection({super.key, this.onLevelSelected, this.onBackPressed});
@@ -25,7 +26,7 @@ class LevelSelection extends StatelessWidget {
           itemCount: 6,
           padding: const EdgeInsets.symmetric(horizontal: 100.0),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
+              crossAxisCount: SkiMasterGame.isMobile ? 2 : 3,
               mainAxisExtent: 50.0,
               crossAxisSpacing: 5.0,
               mainAxisSpacing: 5.0),

@@ -83,6 +83,8 @@ class GamePLay extends Component with HasGameReference<SkiMasterGame> {
         paint: Paint()..color = game.backgroundColor(),
         children: [OpacityEffect.fadeOut(LinearEffectController(1.5))]);
     _hud = Hud(
+        input: SkiMasterGame.isMobile ? input : null,
+        onPausePressed: SkiMasterGame.isMobile ? onPausedPressed : null,
         snowmanSprite: _spriteSheet.getSprite(5, 9),
         playerSprite: _spriteSheet.getSprite(5, 10));
     await _camera.viewport.addAll([_fader, _hud]);
@@ -222,8 +224,11 @@ class GamePLay extends Component with HasGameReference<SkiMasterGame> {
       TiledComponent<FlameGame<World>> map) async {
     _world = World(children: [map, input]);
     await add(_world);
+    final aspectRatio = MediaQuery.of(game.buildContext!).size.aspectRatio;
+    const height = SkiMasterGame.isMobile ? 200.0 : 180.0;
+    final width = SkiMasterGame.isMobile ? height * aspectRatio : 320.0;
     _camera = CameraComponent.withFixedResolution(
-        width: 320, height: 180, world: _world);
+        width: width, height: height, world: _world);
     await add(_camera);
   }
 
